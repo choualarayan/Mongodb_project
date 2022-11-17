@@ -165,10 +165,13 @@ def get_nearest_available_station(lat, lng, nb_stations):
 #----------------------------------------------------------------
 #-----------------------search a station-------------------------
 
+db.stations.create_index([('name',pymongo.TEXT)])
 search=input("Rechercher le nom d'une station avec quelques lettres")
-aa=db.stations.find({'name':  { "$regex": search }  })
+aa=db.stations.find({'$text':{"$search": "\""+search+"\""}})
+longueur=0
 for b in aa:
     print(b['name'])
+    longueur+=1
     
     
     
@@ -176,11 +179,16 @@ for b in aa:
     
 #----------------------------------------------------------------
 #- update / delete a station
-while len(aa)!=1:
-    search = input("Affiner votre recherche pour séléctionner une station en particulier")
-    aa = db.stations.find({'name': {"$regex": search}})
+while longueur!=1:
+    longueur=0
+    search = input("Affiner votre recherche pour sélectionner une station en particulier")
+    aa = db.stations.find({'$text':{"$search": "\""+search+"\""}})
+
+    for b in aa:
+        print(b['name'])
+        longueur+=1
 rep=""
-while rep!="u" or rep!="d":
+while rep!="u" and rep!="d":
     rep=input("Pressez u pour mettre à jour ou d pour supprimer la station")
 if rep=="u":
     vlilles = get_vlille()
@@ -193,13 +201,18 @@ if rep=="u":
         }
         for elem in vlilles
     ]
-
     for data in datas:
-        if data["station_id"]==aa[0]['_id']:
-            db.datas.update_one({'date': data["date"], "station_id": data["station_id"]}, {"$set": data}, upsert=True)
-if rep=="d":
-    db.stations.delete_one({"_id":aa[0]['_id']})
+        aa = db.stations.find({'$text': {"$search": "\"" + search + "\""}})
+        for j in aa:
+            if data["station_id"]==j['_id']:
+                db.datas.update_one({'date': data["date"], "station_id": data["station_id"]}, {"$set": data}, upsert=True)
+                print("mise à jour faite")
 
+if rep=="d":
+    aa = db.stations.find({'$text': {"$search": "\""+search+"\""}})
+    for j in aa:
+        db.stations.delete_one({"_id":j['_id']})
+        print("suppression faite")
 
 
 
